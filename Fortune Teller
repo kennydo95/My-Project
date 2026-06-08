@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Magic 8-Ball</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        body.dark-mode {
+            background: linear-gradient(135deg, #0f0c29 0%, #302b63 100%);
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 30px;
+            padding: 35px;
+            text-align: center;
+            max-width: 500px;
+            width: 100%;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+        }
+
+        body.dark-mode .container {
+            background: rgba(30, 30, 50, 0.95);
+            color: white;
+        }
+
+        h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .eight-ball {
+            width: 250px;
+            height: 250px;
+            background: #1a1a2e;
+            border-radius: 50%;
+            margin: 20px auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: 0.2s;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        .eight-ball:hover {
+            transform: scale(1.02);
+        }
+
+        .eight-ball:active {
+            transform: scale(0.98);
+        }
+
+        .answer-window {
+            width: 120px;
+            height: 120px;
+            background: #2d2d3f;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 15px;
+            color: white;
+            font-weight: bold;
+            font-size: 14px;
+            transition: 0.3s;
+        }
+
+        .question-input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #667eea;
+            border-radius: 25px;
+            font-size: 16px;
+            margin: 20px 0;
+            outline: none;
+        }
+
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+        }
+
+        button:hover {
+            background: #5a67d8;
+        }
+
+        .shake {
+            animation: shake 0.5s ease-in-out;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+
+        .fade {
+            animation: fade 0.3s ease;
+        }
+
+        @keyframes fade {
+            0% { opacity: 0; transform: scale(0.8); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+
+        .history {
+            margin-top: 20px;
+            text-align: left;
+            max-height: 150px;
+            overflow-y: auto;
+            font-size: 12px;
+            border-top: 1px solid #ddd;
+            padding-top: 15px;
+        }
+
+        body.dark-mode .history {
+            border-top-color: #555;
+        }
+
+        .history-item {
+            padding: 5px;
+            border-bottom: 1px solid #eee;
+        }
+
+        body.dark-mode .history-item {
+            border-bottom-color: #444;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔮 Magic 8-Ball 🔮</h1>
+        <p>Ask any yes/no question...</p>
+
+        <div class="eight-ball" id="eightBall" onclick="shakeBall()">
+            <div class="answer-window" id="answerWindow">8</div>
+        </div>
+
+        <input type="text" id="question" class="question-input" placeholder="Type your question here..." onkeypress="if(event.key==='Enter') shakeBall()">
+
+        <div>
+            <button onclick="shakeBall()">🔮 Ask the Magic 8-Ball</button>
+            <button onclick="clearHistory()">🗑️ Clear History</button>
+        </div>
+
+        <div class="history">
+            <strong>📜 Question History:</strong>
+            <div id="historyList">No questions asked yet</div>
+        </div>
+    </div>
+
+    <script>
+        const answers = [
+            // Positive
+            "✨ It is certain",
+            "✨ It is decidedly so",
+            "✨ Without a doubt",
+            "✨ Yes definitely",
+            "✨ You may rely on it",
+            
+            // Somewhat positive
+            "⭐ As I see it, yes",
+            "⭐ Most likely",
+            "⭐ Outlook good",
+            "⭐ Yes",
+            "⭐ Signs point to yes",
+            
+            // Neutral
+            "🌙 Reply hazy, try again",
+            "🌙 Ask again later",
+            "🌙 Better not tell you now",
+            "🌙 Cannot predict now",
+            "🌙 Concentrate and ask again",
+            
+            // Negative
+            "❌ Don't count on it",
+            "❌ My reply is no",
+            "❌ My sources say no",
+            "❌ Outlook not so good",
+            "❌ Very doubtful"
+        ];
+        
+        let history = JSON.parse(localStorage.getItem('magic8ball_history')) || [];
+        
+        function updateHistoryDisplay() {
+            const historyDiv = document.getElementById('historyList');
+            if (history.length === 0) {
+                historyDiv.innerHTML = 'No questions asked yet';
+                return;
+            }
+            historyDiv.innerHTML = history.map(item => 
+                `<div class="history-item">❓ "${item.question}" → ${item.answer}</div>`
+            ).join('');
+        }
+        
+        function saveHistory() {
+            localStorage.setItem('magic8ball_history', JSON.stringify(history.slice(0, 10)));
+        }
+        
+        function getRandomAnswer() {
+            return answers[Math.floor(Math.random() * answers.length)];
+        }
+        
+        function shakeBall() {
+            const questionInput = document.getElementById('question');
+            const question = questionInput.value.trim();
+            
+            if (!question) {
+                alert('Please ask a question first!');
+                return;
+            }
+            
+            const ball = document.getElementById('eightBall');
+            const answerWindow = document.getElementById('answerWindow');
+            
+            // Add shake animation
+            ball.classList.add('shake');
+            
+            // Clear answer during shake
+            answerWindow.innerHTML = '...';
+            answerWindow.style.fontSize = '20px';
+            
+            setTimeout(() => {
+                const answer = getRandomAnswer();
+                answerWindow.innerHTML = answer;
+                answerWindow.style.fontSize = '12px';
+                ball.classList.remove('shake');
+                
+                // Add fade animation to answer
+                answerWindow.classList.add('fade');
+                setTimeout(() => answerWindow.classList.remove('fade'), 300);
+                
+                // Save to history
+                history.unshift({
+                    question: question.length > 40 ? question.substring(0, 40) + '...' : question,
+                    answer: answer
+                });
+                
+                if (history.length > 10) history.pop();
+                saveHistory();
+                updateHistoryDisplay();
+                
+            }, 500);
+        }
+        
+        function clearHistory() {
+            history = [];
+            saveHistory();
+            updateHistoryDisplay();
+        }
+        
+        function toggleDarkMode() {
+            document.body.classList.toggle('dark-mode');
+        }
+        
+        updateHistoryDisplay();
+        
+        // Add dark mode toggle to page
+        const darkBtn = document.createElement('button');
+        darkBtn.textContent = '🌙 Dark Mode';
+        darkBtn.style.position = 'absolute';
+        darkBtn.style.top = '20px';
+        darkBtn.style.right = '20px';
+        darkBtn.onclick = toggleDarkMode;
+        darkBtn.style.background = '#667eea';
+        document.body.appendChild(darkBtn);
+    </script>
+</body>
+</html>
