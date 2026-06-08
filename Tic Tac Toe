@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tic Tac Toe</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f5af19 0%, #f12711 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        body.dark-mode {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 25px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+            padding: 30px;
+            text-align: center;
+            max-width: 500px;
+            width: 100%;
+        }
+
+        body.dark-mode .container {
+            background: rgba(30, 30, 50, 0.95);
+            color: white;
+        }
+
+        h1 {
+            color: #f12711;
+            margin-bottom: 10px;
+        }
+
+        .mode-selector {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        .mode-btn {
+            background: #f5af19;
+            padding: 8px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+        }
+
+        .mode-btn.active {
+            background: #f12711;
+            color: white;
+        }
+
+        .game-status {
+            font-size: 20px;
+            margin-bottom: 20px;
+            padding: 10px;
+            background: #f0f0f0;
+            border-radius: 15px;
+        }
+
+        body.dark-mode .game-status {
+            background: #3d3d55;
+        }
+
+        .board {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .cell {
+            aspect-ratio: 1;
+            background: #f0f0f0;
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 60px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.2s;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        body.dark-mode .cell {
+            background: #3d3d55;
+        }
+
+        .cell:hover {
+            transform: scale(1.02);
+            background: #e0e0e0;
+        }
+
+        .cell.X {
+            color: #f12711;
+        }
+
+        .cell.O {
+            color: #667eea;
+        }
+
+        .reset-btn {
+            background: #f12711;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 10px;
+        }
+
+        .dark-toggle {
+            background: #f5af19;
+            margin-bottom: 15px;
+        }
+
+        .score-board {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            padding: 10px;
+            background: #f0f0f0;
+            border-radius: 15px;
+        }
+
+        body.dark-mode .score-board {
+            background: #3d3d55;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <button class="dark-toggle" onclick="toggleDarkMode()">🌙 Dark Mode</button>
+        <h1>⭕ Tic Tac Toe ❌</h1>
+        <div class="mode-selector">
+            <button class="mode-btn active" onclick="setMode('2player')">👥 2 Player</button>
+            <button class="mode-btn" onclick="setMode('ai')">🤖 vs AI</button>
+        </div>
+        <div class="score-board">
+            <div>❌ X Wins: <span id="xWins">0</span></div>
+            <div>🤝 Ties: <span id="ties">0</span></div>
+            <div>⭕ O Wins: <span id="oWins">0</span></div>
+        </div>
+        <div class="game-status" id="status">Player X's turn</div>
+        <div class="board" id="board">
+            <div class="cell" data-index="0"></div>
+            <div class="cell" data-index="1"></div>
+            <div class="cell" data-index="2"></div>
+            <div class="cell" data-index="3"></div>
+            <div class="cell" data-index="4"></div>
+            <div class="cell" data-index="5"></div>
+            <div class="cell" data-index="6"></div>
+            <div class="cell" data-index="7"></div>
+            <div class="cell" data-index="8"></div>
+        </div>
+        <button class="reset-btn" onclick="resetGame()">🔄 New Game</button>
+    </div>
+
+    <script>
+        let board = ['', '', '', '', '', '', '', '', ''];
+        let currentPlayer = 'X';
+        let gameActive = true;
+        let mode = '2player';
+        let scores = {
+            X: 0,
+            O: 0,
+            ties: 0
+        };
+
+        const winPatterns = [
+            [0,1,2], [3,4,5], [6,7,8],
+            [0,3,6], [1,4,7], [2,5,8],
+            [0,4,8], [2,4,6]
+        ];
+
+        function loadScores() {
+            const saved = localStorage.getItem('tictactoe_scores');
+            if (saved) {
+                scores = JSON.parse(saved);
+                updateScoreDisplay();
+            }
+        }
+
+        function saveScores() {
+            localStorage.setItem('tictactoe_scores', JSON.stringify(scores));
+        }
+
+        function updateScoreDisplay() {
+            document.getElementById('xWins').textContent = scores.X;
+            document.getElementById('oWins').textContent = scores.O;
+            document.getElementById('ties').textContent = scores.ties;
+        }
+
+        function setMode(newMode) {
+            mode = newMode;
+            document.querySelectorAll('.mode-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.textContent.includes(mode === '2player' ? '2 Player' : 'vs AI')) {
+                    btn.classList.add('active');
+                }
+            });
+            resetGame();
+        }
+
+        function makeMove(index) {
+            if (!gameActive || board[index] !== '') return false;
+
+            board[index] = currentPlayer;
+            const cell = document.querySelector(`.cell[data-index="${index}"]`);
+            cell.textContent = currentPlayer;
+            cell.classList.add(currentPlayer);
+
+            if (checkWin()) {
+                gameActive = false;
+                document.getElementById('status').textContent = `🎉 Player ${currentPlayer} wins! 🎉`;
+                scores[currentPlayer]++;
+                saveScores();
+                updateScoreDisplay();
+                return true;
+            }
+
+            if (checkTie()) {
+                gameActive = false;
+                document.getElementById('status').textContent = "It's a tie! 🤝";
+                scores.ties++;
+                saveScores();
+                updateScoreDisplay();
+                return true;
+            }
+
+            currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+            document.getElementById('status').textContent = `Player ${currentPlayer}'s turn`;
+
+            if (mode === 'ai' && currentPlayer === 'O' && gameActive) {
+                setTimeout(aiMove, 300);
+            }
+            return true;
+        }
+
+        function aiMove() {
+            if (!gameActive) return;
+
+            // Try to win
+            for (let i = 0; i < 9; i++) {
+                if (board[i] === '') {
+                    board[i] = 'O';
+                    if (checkWin()) {
+                        board[i] = '';
+                        makeMove(i);
+                        return;
+                    }
+                    board[i] = '';
+                }
+            }
+
+            // Block player from winning
+            for (let i = 0; i < 9; i++) {
+                if (board[i] === '') {
+                    board[i] = 'X';
+                    if (checkWin()) {
+                        board[i] = '';
+                        makeMove(i);
+                        return;
+                    }
+                    board[i] = '';
+                }
+            }
+
+            // Take center
+            if (board[4] === '') {
+                makeMove(4);
+                return;
+            }
+
+            // Take corners
+            const corners = [0,2,6,8];
+            const availableCorners = corners.filter(i => board[i] === '');
+            if (availableCorners.length > 0) {
+                makeMove(availableCorners[Math.floor(Math.random() * availableCorners.length)]);
+                return;
+            }
+
+            // Take any available
+            const available = [];
+            for (let i = 0; i < 9; i++) {
+                if (board[i] === '') available.push(i);
+            }
+            if (available.length > 0) {
+                makeMove(available[Math.floor(Math.random() * available.length)]);
+            }
+        }
+
+        function checkWin() {
+            for (let pattern of winPatterns) {
+                const [a,b,c] = pattern;
+                if (board[a] && board[a] === board[b] && board[a] === board[c]) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        function checkTie() {
+            return board.every(cell => cell !== '');
+        }
+
+        function resetGame() {
+            board = ['', '', '', '', '', '', '', '', ''];
+            currentPlayer = 'X';
+            gameActive = true;
+            document.getElementById('status').textContent = "Player X's turn";
+
+            document.querySelectorAll('.cell').forEach(cell => {
+                cell.textContent = '';
+                cell.classList.remove('X', 'O');
+            });
+        }
+
+        function toggleDarkMode() {
+            document.body.classList.toggle('dark-mode');
+            const btn = document.querySelector('.dark-toggle');
+            btn.textContent = document.body.classList.contains('dark-mode') ? '☀️ Light Mode' : '🌙 Dark Mode';
+        }
+
+        document.querySelectorAll('.cell').forEach(cell => {
+            cell.addEventListener('click', () => {
+                const index = parseInt(cell.dataset.index);
+                makeMove(index);
+            });
+        });
+
+        loadScores();
+    </script>
+</body>
+</html>
