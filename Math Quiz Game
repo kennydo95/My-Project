@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Math Quiz Game</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        body.dark-mode {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 30px;
+            padding: 30px;
+            text-align: center;
+            max-width: 550px;
+            width: 100%;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+        }
+
+        body.dark-mode .container {
+            background: rgba(30, 30, 50, 0.95);
+            color: white;
+        }
+
+        h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .stats {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f0f0f0;
+            border-radius: 15px;
+        }
+
+        body.dark-mode .stats {
+            background: #3d3d55;
+        }
+
+        .score, .high-score, .timer {
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .score span, .high-score span, .timer span {
+            color: #667eea;
+        }
+
+        .question-box {
+            background: #667eea;
+            color: white;
+            padding: 40px;
+            border-radius: 20px;
+            margin-bottom: 25px;
+        }
+
+        .question {
+            font-size: 48px;
+            font-weight: bold;
+        }
+
+        .options {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .option-btn {
+            background: #f0f0f0;
+            border: none;
+            padding: 15px;
+            border-radius: 15px;
+            font-size: 24px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        body.dark-mode .option-btn {
+            background: #3d3d55;
+            color: white;
+        }
+
+        .option-btn:hover {
+            transform: scale(1.02);
+            background: #667eea;
+            color: white;
+        }
+
+        .option-btn.correct {
+            background: #4caf50;
+            color: white;
+        }
+
+        .option-btn.wrong {
+            background: #ff6b6b;
+            color: white;
+        }
+
+        .next-btn, .reset-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+        }
+
+        .next-btn:hover, .reset-btn:hover {
+            background: #5a67d8;
+        }
+
+        .message {
+            margin-top: 15px;
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        .dark-toggle {
+            background: #764ba2;
+            margin-bottom: 15px;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 20px;
+            color: white;
+            cursor: pointer;
+        }
+
+        .timer-warning {
+            color: #ff6b6b;
+            animation: pulse 0.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <button class="dark-toggle" onclick="toggleDarkMode()">🌙 Dark Mode</button>
+        <h1>🧮 Math Quiz Game</h1>
+        
+        <div class="stats">
+            <div class="score">🎯 Score: <span id="score">0</span></div>
+            <div class="high-score">🏆 Best: <span id="highScore">0</span></div>
+            <div class="timer">⏱️ Time: <span id="timer">15</span>s</div>
+        </div>
+
+        <div class="question-box">
+            <div class="question" id="question">0 + 0 = ?</div>
+        </div>
+
+        <div class="options" id="options">
+            <button class="option-btn">0</button>
+            <button class="option-btn">0</button>
+            <button class="option-btn">0</button>
+            <button class="option-btn">0</button>
+        </div>
+
+        <div>
+            <button class="next-btn" id="nextBtn" onclick="nextQuestion()" style="display: none;">➡️ Next Question</button>
+            <button class="reset-btn" onclick="resetGame()">🔄 New Game</button>
+        </div>
+        <div class="message" id="message"></div>
+    </div>
+
+    <script>
+        let currentQuestion = {};
+        let score = 0;
+        let highScore = localStorage.getItem('mathQuizHighScore') || 0;
+        let timeLeft = 15;
+        let timerInterval = null;
+        let canAnswer = true;
+        let answered = false;
+
+        document.getElementById('highScore').textContent = highScore;
+
+        function generateQuestion() {
+            const operations = ['+', '-', '*'];
+            const operation = operations[Math.floor(Math.random() * 3)];
+            
+            let num1, num2, answer;
+            
+            if (operation === '+') {
+                num1 = Math.floor(Math.random() * 50) + 1;
+                num2 = Math.floor(Math.random() * 50) + 1;
+                answer = num1 + num2;
+            } else if (operation === '-') {
+                num1 = Math.floor(Math.random() * 50) + 25;
+                num2 = Math.floor(Math.random() * num1);
+                answer = num1 - num2;
+            } else {
+                num1 = Math.floor(Math.random() * 12) + 1;
+                num2 = Math.floor(Math.random() * 12) + 1;
+                answer = num1 * num2;
+            }
+            
+            // Generate wrong answers
+            let options = [answer];
+            while (options.length < 4) {
+                let offset = Math.floor(Math.random() * 10) + 1;
+                let wrongAnswer = answer + (Math.random() > 0.5 ? offset : -offset);
+                if (wrongAnswer > 0 && !options.includes(wrongAnswer)) {
+                    options.push(wrongAnswer);
+                }
+            }
+            
+            // Shuffle options
+            for (let i = options.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [options[i], options[j]] = [options[j], options[i]];
+            }
+            
+            return {
+                text: `${num1} ${operation} ${num2}`,
+                answer: answer,
+                options: options
+            };
+        }
+
+        function updateTimer() {
+            const timerDisplay = document.getElementById('timer');
+            timerDisplay.textContent = timeLeft;
+            
+            if (timeLeft <= 3) {
+                timerDisplay.classList.add('timer-warning');
+            } else {
+                timerDisplay.classList.remove('timer-warning');
+            }
+            
+            if (timeLeft <= 0 && canAnswer && !answered) {
+                clearInterval(timerInterval);
+                timeOut();
+            }
+        }
+
+        function startTimer() {
+            if (timerInterval) clearInterval(timerInterval);
+            timeLeft = 15;
+            updateTimer();
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                updateTimer();
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                }
+            }, 1000);
+        }
+
+        function timeOut() {
+            canAnswer = false;
+            answered = true;
+            document.getElementById('message').innerHTML = '⏰ Time\'s up! Click Next →';
+            document.getElementById('nextBtn').style.display = 'inline-block';
+            
+            // Highlight correct answer
+            const buttons = document.querySelectorAll('.option-btn');
+            buttons.forEach(btn => {
+                if (parseInt(btn.textContent) === currentQuestion.answer) {
+                    btn.classList.add('correct');
+                }
+                btn.disabled = true;
+            });
+        }
+
+        function loadQuestion() {
+            currentQuestion = generateQuestion();
+            document.getElementById('question').textContent = currentQuestion.text;
+            
+            const buttons = document.querySelectorAll('.option-btn');
+            buttons.forEach((btn, index) => {
+                btn.textContent = currentQuestion.options[index];
+                btn.classList.remove('correct', 'wrong');
+                btn.disabled = false;
+                btn.style.opacity = '1';
+            });
+            
+            canAnswer = true;
+            answered = false;
+            document.getElementById('message').innerHTML = '';
+            document.getElementById('nextBtn').style.display = 'none';
+            startTimer();
+        }
+
+        function checkAnswer(selected, btnElement) {
+            if (!canAnswer || answered) return;
+            
+            canAnswer = false;
+            answered = true;
+            clearInterval(timerInterval);
+            
+            const isCorrect = selected === currentQuestion.answer;
+            
+            if (isCorrect) {
+                score++;
+                document.getElementById('score').textContent = score;
+                document.getElementById('message').innerHTML = '✅ Correct! +1 point ✅';
+                btnElement.classList.add('correct');
+                
+                if (score > highScore) {
+                    highScore = score;
+                    localStorage.setItem('mathQuizHighScore', highScore);
+                    document.getElementById('highScore').textContent = highScore;
+                    document.getElementById('message').innerHTML = '🎉 NEW HIGH SCORE! 🎉';
+                }
+            } else {
+                document.getElementById('message').innerHTML = `❌ Wrong! The answer was ${currentQuestion.answer} ❌`;
+                btnElement.classList.add('wrong');
+                
+                // Show correct answer
+                const buttons = document.querySelectorAll('.option-btn');
+                buttons.forEach(btn => {
+                    if (parseInt(btn.textContent) === currentQuestion.answer) {
+                        btn.classList.add('correct');
+                    }
+                });
+            }
+            
+            // Disable all buttons
+            const buttons = document.querySelectorAll('.option-btn');
+            buttons.forEach(btn => {
+                btn.disabled = true;
+            });
+            
+            document.getElementById('nextBtn').style.display = 'inline-block';
+        }
+
+        function nextQuestion() {
+            loadQuestion();
+        }
+
+        function resetGame() {
+            score = 0;
+            document.getElementById('score').textContent = score;
+            clearInterval(timerInterval);
+            loadQuestion();
+        }
+
+        function toggleDarkMode() {
+            document.body.classList.toggle('dark-mode');
+        }
+
+        // Attach event listeners to option buttons
+        document.querySelectorAll('.option-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const selected = parseInt(btn.textContent);
+                checkAnswer(selected, btn);
+            });
+        });
+
+        // Start the game
+        loadQuestion();
+    </script>
+</body>
+</html>
