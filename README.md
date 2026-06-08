@@ -1,4 +1,4 @@
-# 👋 Hi, I'm Kenny DO
+# 👋 Hi, I'm Kenny Do
 
 🎓 **Computer Science student** graduating in **March 2026**  
 💻 Passionate about building clean, user-friendly web applications  
