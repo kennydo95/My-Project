@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Graphing Calculator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        body.dark-mode {
+            background: linear-gradient(135deg, #0f0c29 0%, #302b63 100%);
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 30px;
+            padding: 25px;
+            max-width: 850px;
+            width: 100%;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+        }
+
+        body.dark-mode .container {
+            background: rgba(30, 30, 50, 0.95);
+            color: white;
+        }
+
+        h1 {
+            color: #2a5298;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #888;
+            margin-bottom: 20px;
+        }
+
+        canvas {
+            display: block;
+            margin: 0 auto;
+            border: 2px solid #2a5298;
+            border-radius: 10px;
+            background: white;
+        }
+
+        body.dark-mode canvas {
+            background: #1e1e2e;
+        }
+
+        .controls {
+            margin-top: 20px;
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .function-input {
+            flex: 2;
+            min-width: 200px;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #2a5298;
+            border-radius: 25px;
+            font-size: 16px;
+            font-family: monospace;
+            outline: none;
+        }
+
+        button {
+            background: #2a5298;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        button:hover {
+            background: #1e3c72;
+        }
+
+        .presets {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-top: 15px;
+        }
+
+        .preset-btn {
+            background: #667eea;
+            padding: 8px 15px;
+            font-size: 14px;
+        }
+
+        .info {
+            margin-top: 15px;
+            padding: 10px;
+            background: #f0f0f0;
+            border-radius: 15px;
+            font-size: 14px;
+            text-align: center;
+        }
+
+        body.dark-mode .info {
+            background: #3d3d55;
+        }
+
+        .dark-toggle {
+            background: #764ba2;
+            margin-bottom: 15px;
+            display: block;
+            margin-left: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <button class="dark-toggle" onclick="toggleDarkMode()">🌙 Dark Mode</button>
+        <h1>📈 Graphing Calculator</h1>
+        <div class="subtitle">f(x) = <span id="equationDisplay">x²</span></div>
+        
+        <canvas id="graphCanvas" width="700" height="400"></canvas>
+        
+        <div class="controls">
+            <div class="function-input">
+                <input type="text" id="functionInput" value="x*x" placeholder="Enter function: x*x, sin(x), cos(x), sqrt(x)">
+            </div>
+            <button onclick="plotFunction()">📊 Plot</button>
+        </div>
+        
+        <div class="presets">
+            <button class="preset-btn" onclick="setFunction('x*x')">x²</button>
+            <button class="preset-btn" onclick="setFunction('x*x*x')">x³</button>
+            <button class="preset-btn" onclick="setFunction('Math.sin(x)')">sin(x)</button>
+            <button class="preset-btn" onclick="setFunction('Math.cos(x)')">cos(x)</button>
+            <button class="preset-btn" onclick="setFunction('Math.sqrt(x)')">√x</button>
+            <button class="preset-btn" onclick="setFunction('1/x')">1/x</button>
+            <button class="preset-btn" onclick="setFunction('Math.exp(x)')">e^x</button>
+            <button class="preset-btn" onclick="setFunction('Math.log(x+0.1)')">ln(x)</button>
+        </div>
+        
+        <div class="info">
+            💡 Try: x*x, Math.sin(x), Math.cos(x), Math.sqrt(x), 1/x, Math.exp(x), x*x - 4, (x-2)*(x+3)
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('graphCanvas');
+        const ctx = canvas.getContext('2d');
+        const width = 700;
+        const height = 400;
+        
+        // Graphing bounds
+        let xMin = -5;
+        let xMax = 5;
+        let yMin = -5;
+        let yMax = 5;
+        
+        function plotFunction() {
+            const funcStr = document.getElementById('functionInput').value;
+            document.getElementById('equationDisplay').textContent = funcStr;
+            
+            try {
+                // Create function from string
+                const fn = new Function('x', 'return ' + funcStr);
+                
+                // Clear canvas
+                ctx.fillStyle = document.body.classList.contains('dark-mode') ? '#1e1e2e' : 'white';
+                ctx.fillRect(0, 0, width, height);
+                
+                // Draw grid
+                drawGrid();
+                
+                // Draw axes
+                drawAxes();
+                
+                // Draw the function
+                ctx.beginPath();
+                ctx.strokeStyle = '#ff6b6b';
+                ctx.lineWidth = 3;
+                
+                let firstPoint = true;
+                
+                for (let px = 0; px <= width; px++) {
+                    const x = xMin + (px / width) * (xMax - xMin);
+                    let y;
+                    
+                    try {
+                        y = fn(x);
+                    } catch (e) {
+                        firstPoint = true;
+                        continue;
+                    }
+                    
+                    if (!isFinite(y) || isNaN(y)) {
+                        firstPoint = true;
+                        continue;
+                    }
+                    
+                    const py = height - ((y - yMin) / (yMax - yMin)) * height;
+                    
+                    if (py < 0 || py > height) {
+                        firstPoint = true;
+                        continue;
+                    }
+                    
+                    if (firstPoint) {
+                        ctx.moveTo(px, py);
+                        firstPoint = false;
+                    } else {
+                        ctx.lineTo(px, py);
+                    }
+                }
+                
+                ctx.stroke();
+                
+            } catch (error) {
+                alert('Invalid function! Try: x*x, Math.sin(x), Math.cos(x)');
+            }
+        }
+        
+        function drawGrid() {
+            ctx.strokeStyle = '#ddd';
+            ctx.lineWidth = 0.5;
+            
+            // Vertical grid lines
+            const xStep = (xMax - xMin) / 10;
+            for (let x = xMin; x <= xMax; x += xStep) {
+                const px = ((x - xMin) / (xMax - xMin)) * width;
+                ctx.beginPath();
+                ctx.moveTo(px, 0);
+                ctx.lineTo(px, height);
+                ctx.stroke();
+            }
+            
+            // Horizontal grid lines
+            const yStep = (yMax - yMin) / 10;
+            for (let y = yMin; y <= yMax; y += yStep) {
+                const py = height - ((y - yMin) / (yMax - yMin)) * height;
+                ctx.beginPath();
+                ctx.moveTo(0, py);
+                ctx.lineTo(width, py);
+                ctx.stroke();
+            }
+        }
+        
+        function drawAxes() {
+            ctx.strokeStyle = '#2a5298';
+            ctx.lineWidth = 2;
+            
+            // X-axis
+            const xAxisY = height - ((0 - yMin) / (yMax - yMin)) * height;
+            if (xAxisY >= 0 && xAxisY <= height) {
+                ctx.beginPath();
+                ctx.moveTo(0, xAxisY);
+                ctx.lineTo(width, xAxisY);
+                ctx.stroke();
+                
+                // Arrow
+                ctx.beginPath();
+                ctx.moveTo(width - 5, xAxisY - 3);
+                ctx.lineTo(width, xAxisY);
+                ctx.lineTo(width - 5, xAxisY + 3);
+                ctx.stroke();
+            }
+            
+            // Y-axis
+            const yAxisX = ((0 - xMin) / (xMax - xMin)) * width;
+            if (yAxisX >= 0 && yAxisX <= width) {
+                ctx.beginPath();
+                ctx.moveTo(yAxisX, 0);
+                ctx.lineTo(yAxisX, height);
+                ctx.stroke();
+                
+                // Arrow
+                ctx.beginPath();
+                ctx.moveTo(yAxisX - 3, 5);
+                ctx.lineTo(yAxisX, 0);
+                ctx.lineTo(yAxisX + 3, 5);
+                ctx.stroke();
+            }
+            
+            // Labels
+            ctx.fillStyle = '#2a5298';
+            ctx.font = '12px Arial';
+            ctx.fillText('x', width - 10, xAxisY - 5);
+            ctx.fillText('y', yAxisX + 5, 15);
+        }
+        
+        function setFunction(func) {
+            document.getElementById('functionInput').value = func;
+            plotFunction();
+        }
+        
+        function toggleDarkMode() {
+            document.body.classList.toggle('dark-mode');
+            plotFunction();
+        }
+        
+        // Initial plot
+        plotFunction();
+        
+        // Handle enter key
+        document.getElementById('functionInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') plotFunction();
+        });
+    </script>
+</body>
+</html>
